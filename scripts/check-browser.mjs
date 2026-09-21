@@ -8,6 +8,9 @@ await mkdir('artifacts', { recursive: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
+page.on('console', message => {
+  if (message.type() === 'error') errors.push(message.text());
+});
 try {
   await page.goto(baseURL);
   await page.waitForFunction(() => window.galaxyDiagnostics?.().renderer);

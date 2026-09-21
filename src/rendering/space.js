@@ -12,14 +12,42 @@ function pointCloud(positions, colors, size = 2, opacity = 1) {
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   const material = new THREE.ShaderMaterial({
     uniforms: { pointSize: { value: size }, alpha: { value: opacity } },
-    vertexShader: `attribute vec3 color; varying vec3 vColor; uniform float pointSize;
+    vertexShader: `varying vec3 vColor; uniform float pointSize;
       void main(){ vColor=color; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); gl_PointSize=pointSize; }`,
     fragmentShader: `varying vec3 vColor; uniform float alpha;
       void main(){ float r=length(gl_PointCoord-.5)*2.; if(r>1.) discard;
       gl_FragColor=vec4(vColor, pow(1.-r,1.4)*alpha); }`,
     transparent: true, depthWrite: false, vertexColors: true, blending: THREE.AdditiveBlending,
   });
+  material.userData.baseAlpha = opacity;
   return new THREE.Points(geometry, material);
+}
+
+function makeOortCloud(seed, count) {
+  const random = randomGenerator(seed), positions = [], colors = [];
+  for (let i = 0; i < count; i++) {
+    const z = random() * 2 - 1;
+    const angle = random() * Math.PI * 2;
+    const radius = .34 + Math.pow(random(), .38) * .16;
+    const spread = Math.sqrt(1 - z * z);
+    positions.push(Math.cos(angle) * spread * radius, Math.sin(angle) * spread * radius, z * radius);
+    const tint = .72 + random() * .25;
+    colors.push(.53 * tint, .72 * tint, .78 * tint);
+  }
+  const group = new THREE.Group();
+  group.add(pointCloud(positions, colors, 2.05, .6));
+  const circlePoints = Array.from({ length: 193 }, (_, index) => {
+    const angle = index / 192 * Math.PI * 2;
+    return new THREE.Vector3(Math.cos(angle) * .5, Math.sin(angle) * .5, 0);
+  });
+  for (const [rotationX, rotationY] of [[0, 0], [1.04, 0], [0, 1.04]]) {
+    const material = new THREE.LineBasicMaterial({ color: '#86aeb5', opacity: .12, transparent: true, depthWrite: false });
+    material.userData.baseOpacity = .12;
+    const ring = new THREE.Line(new THREE.BufferGeometry().setFromPoints(circlePoints), material);
+    ring.rotation.set(rotationX, rotationY, 0);
+    group.add(ring);
+  }
+  return group;
 }
 
 function makeGalaxy(seed, count) {
@@ -88,6 +116,15 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
     const mesh = new THREE.Mesh(sphereGeometry, material);
     mesh.rotation.y = body.id === 'earth' ? 2.7 : .3;
     mesh.rotation.z = body.id === 'earth' ? .12 : 0;
+    if (body.id === 'saturn') {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(1.28, 2.05, 64),
+        new THREE.MeshBasicMaterial({ color: '#d8c9a4', transparent: true, opacity: .72, side: THREE.DoubleSide, depthWrite: false }),
+      );
+      ring.rotation.x = .42;
+      ring.rotation.y = -.2;
+      mesh.add(ring);
+    }
     scene.add(mesh);
     return { body, mesh, position: planetPosition(body) };
   });
@@ -120,14 +157,24 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
   });
 
   const random = randomGenerator(23), starsPositions = [], starsColors = [];
-  for (let i = 0; i < (lowQuality ? 1800 : 4500); i++) {
-    const radius = 10 ** (-.8 + random() * 5.7);
+  const starCount = lowQuality ? 1800 : 4500;
+  for (let i = 0; i < starCount; i++) {
+    const nearby = i < starCount * .38;
+    const radius = nearby ? .8 + Math.pow(random(), .72) * 42 : 10 ** (1.35 + random() * 3.25);
     const a = random() * Math.PI * 2, z = random() * 2 - 1;
     starsPositions.push(radius * Math.sqrt(1 - z * z) * Math.cos(a), radius * Math.sqrt(1 - z * z) * Math.sin(a), radius * z);
     starsColors.push(.65 + random() * .35, .7 + random() * .3, .85 + random() * .15);
   }
   const stars = pointCloud(starsPositions, starsColors, 2.6, .8);
   scene.add(stars);
+  const nearbyStarData = [
+    { name: '프록시마 센타우리', distance: 4.25, position: [3.55, -1.8, .4], color: [1, .5, .34] },
+    { name: '시리우스', distance: 8.6, position: [-6.3, 4.65, 1.2], color: [.72, .84, 1] },
+    { name: '엡실론 에리다니', distance: 10.5, position: [7.5, 5.7, -2.4], color: [1, .78, .46] },
+    { name: '프로키온', distance: 11.5, position: [-8.2, -6.1, 1.8], color: [.92, .96, 1] },
+  ];
+  const nearbyStars = pointCloud(nearbyStarData.flatMap(star => star.position), nearbyStarData.flatMap(star => star.color), 7, 1);
+  scene.add(nearbyStars);
   const milkyway = makeGalaxy(41, lowQuality ? 9000 : 21000);
   scene.add(milkyway);
   const andromeda = makeGalaxy(91, lowQuality ? 3500 : 7500);
@@ -142,7 +189,7 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
     scene.add(galaxy);
     return { galaxy, position, diameter: (12000 + random() * 30000) * LY };
   });
-  const oort = new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(.5, 2)), new THREE.LineBasicMaterial({ color: '#739caa', opacity: .07, transparent: true, depthWrite: false }));
+  const oort = makeOortCloud(177, lowQuality ? 850 : 1900);
   scene.add(oort);
   const web = makeWeb(711, lowQuality ? 9000 : 22000);
   const cosmic = makeWeb(914, lowQuality ? 13000 : 28000);
@@ -171,7 +218,15 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
     if (!object.visible) return;
     object.scale.setScalar(scale);
     object.position.set(...position.map(value => projectMeters(value, zoom, 10)));
-    if (object.material?.uniforms?.alpha) object.material.uniforms.alpha.value = alpha;
+    object.traverse(child => {
+      const material = child.material;
+      if (!material) return;
+      if (material.uniforms?.alpha) material.uniforms.alpha.value = (material.userData.baseAlpha ?? 1) * alpha;
+      else if (material.transparent) {
+        if (material.userData.baseOpacity === undefined) material.userData.baseOpacity = material.opacity;
+        material.opacity = material.userData.baseOpacity * alpha;
+      }
+    });
   }
 
   return {
@@ -187,18 +242,21 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
       for (const { body, mesh, position } of planets) {
         const radius = projectMeters(body.diameter / 2, zoom, 10);
         const screenDiameter = projectMeters(body.diameter, zoom, width);
-        const visible = zoom < 15.2 && radius > .001 && radius < 30;
+        const markerRadiusPixels = body.id === 'sun' ? 7 : body.id === 'saturn' ? 5.5 : 4;
+        const markerRadius = markerRadiusPixels * 10 / width;
+        const visualRadius = Math.max(radius, markerRadius);
+        const visible = zoom < 15.2 && visualRadius < 30;
         mesh.visible = visible;
         if (visible) {
-          mesh.scale.setScalar(radius);
+          mesh.scale.setScalar(visualRadius);
           mesh.position.set(...position.map(m => projectMeters(m, zoom, 10)));
         }
         if (body.id === 'earth') {
           atmosphere.visible = visible;
-          atmosphere.scale.setScalar(radius * 1.026);
+          atmosphere.scale.setScalar(visualRadius * 1.026);
         }
         if (zoom < 14.9 && (body.id !== 'earth' || zoom > 8)) {
-          labels.push({ id: body.id, name: body.name, position, pixels: screenDiameter, color: body.color });
+          labels.push({ id: body.id, name: body.name, position, pixels: Math.max(screenDiameter, markerRadiusPixels * 2), color: body.color });
         }
       }
       for (const { body, line } of orbitLines) {
@@ -211,8 +269,8 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
         }
       }
       setObject(oort, byId.oort.diameter, [-AU, 0, 0], zoom, visibility(zoom, 14.8, 17.2));
-      oort.material.opacity = .09 * visibility(zoom, 14.8, 17.2);
       setObject(stars, LY, [0, 0, 0], zoom, visibility(zoom, 16, 19.9));
+      setObject(nearbyStars, LY, [0, 0, 0], zoom, visibility(zoom, 16.35, 18.35));
       setObject(milkyway, byId.milkyway.diameter, [-26000 * LY, 0, 0], zoom, visibility(zoom, 19.15, 23.3));
       setObject(andromeda, byId.andromeda.diameter, [2.15e6 * LY, .85e6 * LY, .95e6 * LY], zoom, visibility(zoom, 21.7, 23.7));
       satelliteGalaxies.forEach(({ galaxy, position, diameter }) => setObject(galaxy, diameter, position, zoom, visibility(zoom, 22.15, 23.8)));
@@ -220,6 +278,9 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
       setObject(cosmic, byId.universe.diameter, [0, 0, 0], zoom, smoothstep(25.6, 26.6, zoom));
       setObject(boundary, byId.universe.diameter, [0, 0, 0], zoom, smoothstep(26.3, 26.8, zoom));
       if (zoom > 15.5 && zoom < 18.2) labels.push({ id: 'oort', name: '오르트 구름', position: [byId.oort.diameter * .48, 0, 0], color: '#aac2cf', pixels: 0 });
+      if (zoom > 16.75 && zoom < 18.45) {
+        nearbyStarData.forEach(star => labels.push({ id: star.name, name: `${star.name} · ${star.distance}광년`, position: star.position.map(value => value * LY), color: '#c9dbe2', pixels: 0 }));
+      }
       if (zoom > 20 && zoom < 22.5) labels.push({ id: 'galactic-center', name: '은하 중심', position: [-26000 * LY, 0, 0], color: '#d6c7ab', pixels: 0 });
       if (zoom > 22 && zoom < 23.7) labels.push({ id: 'andromeda', name: '안드로메다', position: [2.15e6 * LY, .85e6 * LY, .95e6 * LY], color: '#cbbced', pixels: 0 });
       renderer.render(scene, camera);
@@ -228,7 +289,7 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
     setQuality(low) {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, low ? 1 : 1.75));
       renderer.setSize(width, height);
-      [stars, milkyway, andromeda, web, cosmic].forEach(points => points.geometry.setDrawRange(0, Math.floor(points.geometry.attributes.position.count * (low ? .5 : 1))));
+      [stars, nearbyStars, milkyway, andromeda, web, cosmic].forEach(points => points.geometry.setDrawRange(0, Math.floor(points.geometry.attributes.position.count * (low ? .5 : 1))));
     },
     getStats() { return { ...renderer.info.memory, calls: renderer.info.render.calls, points: renderer.info.render.points }; },
     dispose() {
