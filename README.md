@@ -37,4 +37,4 @@ npm run check:browser
 
 브라우저 검증은 개발 서버가 실행 중이어야 하며 기본적으로 macOS의 Google Chrome을 사용합니다. 다른 환경에서는 `CHROME_PATH`와 `BASE_URL`을 지정하세요.
 
-현재 상태: 핵심 로직 테스트 7개 통과. 브라우저 검증 및 수정된 빌드 설정의 재실행은 수행하지 않았습니다. 사용자 직접 검토 예정입니다.
+`master` 브랜치에 푸시하면 GitHub Actions가 테스트와 Vite 빌드를 실행하고 `dist`를 GitHub Pages에 배포합니다.
