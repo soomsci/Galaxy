@@ -16,7 +16,6 @@ try {
   assert.equal(await page.locator('#stage-title').textContent(), '지구');
   assert.ok((await page.locator('#size-cards').textContent()).includes('12,756'));
   await page.screenshot({ path: 'artifacts/earth-desktop.png' });
-  const memoryStart = await page.evaluate(() => window.galaxyDiagnostics().stats);
   for (let i = 0; i < 8; i++) {
     await page.locator(`[data-stage="${i}"]`).click();
     await page.waitForFunction(index => window.galaxyDiagnostics().zoom === window.galaxyDiagnostics().targetZoom && document.querySelector(`[data-stage="${index}"]`).getAttribute('aria-current') === 'step', i);
@@ -24,6 +23,14 @@ try {
     assert.ok((await page.locator('#size-cards').innerText()).trim().length > 20);
     if ([2, 4, 5, 6, 7].includes(i)) await page.screenshot({ path: `artifacts/stage-${i}-desktop.png` });
   }
+  const memoryStart = await page.evaluate(() => window.galaxyDiagnostics().stats);
+  for (let i = 0; i < 8; i++) {
+    await page.locator(`[data-stage="${i}"]`).click();
+    await page.waitForFunction(index => window.galaxyDiagnostics().zoom === window.galaxyDiagnostics().targetZoom && document.querySelector(`[data-stage="${index}"]`).getAttribute('aria-current') === 'step', i);
+  }
+  const memoryEnd = await page.evaluate(() => window.galaxyDiagnostics().stats);
+  assert.equal(memoryStart.geometries, memoryEnd.geometries, 'repeated scene traversal should reuse geometry');
+  assert.equal(memoryStart.textures, memoryEnd.textures, 'repeated scene traversal should reuse textures');
   await page.locator('#home-button').click();
   await page.waitForFunction(() => window.galaxyDiagnostics().stage === 'earth');
   await page.locator('.size-card').first().click();
@@ -48,9 +55,6 @@ try {
   await page.locator('#info-button').click();
   await page.locator('#low-quality').check();
   await page.keyboard.press('Escape');
-  const memoryEnd = await page.evaluate(() => window.galaxyDiagnostics().stats);
-  assert.equal(memoryStart.geometries, memoryEnd.geometries, 'scene traversal should reuse geometry');
-
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#home-button').click();
   await page.waitForFunction(() => window.galaxyDiagnostics().stage === 'earth');
