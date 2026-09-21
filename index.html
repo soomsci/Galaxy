@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080d12" />
+    <meta name="description" content="지구에서 관측 가능한 우주까지. 3D 우주를 탐색하며 천체의 크기를 만나보세요." />
+    <title>GALAXY — 우주의 크기를 여행하다</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Galaxy 처음으로"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><ellipse cx="18" cy="18" rx="16" ry="6" transform="rotate(-38 18 18)"/><ellipse cx="18" cy="18" rx="10" ry="16" transform="rotate(35 18 18)"/><circle cx="18" cy="18" r="3"/></svg><span>GALAXY<span class="brand-sub">A JOURNEY THROUGH SCALE</span></span></a>
+        <div class="header-center"><span class="status-dot"></span> 우주의 크기를 여행하다</div>
+        <div class="header-actions"><button id="info-button" class="quiet-button" aria-label="탐색 도움말과 데이터 출처">탐색 안내 <span class="info-icon">i</span></button><button id="home-button" class="home-button" title="지구로 돌아가기"><span aria-hidden="true">↺</span><span> 지구로</span></button></div>
+      </header>
+
+      <nav class="stage-nav" aria-label="우주 탐색 단계" id="stage-nav"></nav>
+
+      <main>
+        <div class="space" id="space">
+          <div class="star-backdrop" aria-hidden="true" id="star-backdrop"></div>
+          <div class="space-grid" aria-hidden="true"></div>
+          <div id="object-labels" aria-hidden="true"></div>
+          <div class="origin" id="origin" aria-hidden="true"><span class="origin-cross"></span><span class="origin-label">YOU ARE HERE</span></div>
+          <div id="diameter-line" class="diameter-line" aria-hidden="true"><span id="diameter-label"></span></div>
+          <div class="scene-caption"><span class="tiny-dot"></span><span id="scene-caption">지구 기준 · 실제 축척</span></div>
+        </div>
+
+        <section class="intro" aria-labelledby="stage-title">
+          <div class="eyebrow"><span id="stage-count">01 / 08</span><span class="short-line"></span><span id="stage-english">OUR PALE BLUE DOT</span></div>
+          <h1 id="stage-title">지구</h1>
+          <p id="stage-description">우리의 모든 이야기가 시작되는 곳.<br />이 작은 푸른 행성에서 우주로 떠나보세요.</p>
+          <div class="location-path"><span class="tiny-dot"></span><span id="location-path">지구</span></div>
+        </section>
+
+        <aside class="zoom-control" aria-label="우주 규모 조절">
+          <span class="rail-title">SCALE</span>
+          <button id="zoom-out" aria-label="더 넓게 보기" title="더 넓게 보기">−</button>
+          <div class="range-wrap"><div class="rail-ticks" aria-hidden="true"></div><input id="zoom-range" aria-label="화면 가로 폭의 로그 스케일" type="range" min="7.4" max="27.45" step="0.01" value="7.65" /><div class="rail-extremes" aria-hidden="true"><span>10²⁷</span><span>10⁷</span></div></div>
+          <button id="zoom-in" aria-label="더 가까이 보기" title="더 가까이 보기">+</button>
+          <span class="rail-unit">METERS</span>
+        </aside>
+
+        <div id="render-status" class="render-status" role="status" hidden></div>
+
+        <section class="size-panel" aria-label="현재 단계의 천체 크기">
+          <div class="panel-heading"><div><span class="section-dot"></span><h2>크기로 만나는 우주</h2><span class="panel-subtitle">HOW BIG IS IT?</span></div><button id="more-bodies" class="text-button">모든 천체 보기 <span aria-hidden="true">↗</span></button></div>
+          <div class="size-cards" id="size-cards"></div>
+          <div class="panel-footnote"><span id="representation-note"></span><span>카드 그림은 크기 비교용 축척이 아닙니다.</span></div>
+        </section>
+      </main>
+
+      <footer class="bottom-bar">
+        <div class="scale-readout"><span class="muted">화면 가로 폭</span><strong id="scale-value"></strong><span class="power" id="power-value"></span><span class="scale-rule" id="scale-rule"><span id="scale-rule-label"></span></span></div>
+        <div class="input-hint"><svg width="13" height="18" viewBox="0 0 13 18" fill="none" aria-hidden="true"><rect x="1" y="1" width="11" height="16" rx="5.5"/><path d="M6.5 4v4"/></svg> 스크롤로 우주를 탐색하세요 <span class="key-hint">↑ ↓</span></div>
+        <button id="tour-button" class="tour-button"><span class="play-icon" aria-hidden="true">▷</span><span id="tour-label">자동 여행</span></button>
+      </footer>
+    </div>
+
+    <dialog id="info-dialog" aria-labelledby="info-title">
+      <div class="dialog-heading"><span class="eyebrow">FIELD NOTES</span><button class="close-dialog" aria-label="닫기">×</button></div>
+      <h2 id="info-title">아주 작은 점에서,<br />아주 넓은 우주로.</h2>
+      <p>휠을 아래로 굴리면 더 넓은 우주가 보입니다. 모바일에서는 두 손가락을 모으거나 우측 슬라이더를 움직여보세요.</p>
+      <div class="help-grid"><span>가까이 / 멀리</span><strong>↑ / ↓ 또는 + / −</strong><span>이전 / 다음 단계</span><strong>← / →</strong><span>지구 / 우주의 끝</span><strong>Home / End</strong></div>
+      <h3>크기를 읽는 방법</h3>
+      <p>아래 카드에서 천체의 지름을 확인하세요. 행성의 적도 지름, 은하의 대표 지름, 구조의 분포 범위, 천체 사이 거리를 구분해 표시합니다. 카드를 누르면 자세한 정보와 출처를 볼 수 있습니다.</p>
+      <p>행성 메시의 크기는 실제 축척입니다. 작아진 천체를 가리키는 점, 배경 별, 카드의 그림은 실제 크기가 아닙니다. 은하의 나선팔과 우주 거대구조는 학습용 개념도입니다.</p>
+      <label class="quality-option"><input type="checkbox" id="low-quality" /> 가벼운 화면 사용 <span>입자 수와 해상도 줄이기</span></label>
+      <h3>데이터와 이미지</h3><div id="source-links" class="source-links"></div>
+      <p class="credits">지구 이미지: NASA / Reto Stöckli, Blue Marble. 수치는 교육용 반올림 값이며 구조의 정의에 따라 달라질 수 있습니다.</p>
+    </dialog>
+
+    <dialog id="body-dialog" aria-labelledby="body-dialog-title"><div class="dialog-heading"><span class="eyebrow" id="body-dialog-english"></span><button class="close-dialog" aria-label="닫기">×</button></div><h2 id="body-dialog-title"></h2><p class="body-dialog-measure" id="body-dialog-measure"></p><div class="body-dialog-value" id="body-dialog-value"></div><p id="body-dialog-comparison"></p><p id="body-dialog-note"></p><a id="body-source" class="source-link" target="_blank" rel="noopener noreferrer"></a></dialog>
+
+    <dialog id="catalog-dialog" aria-labelledby="catalog-title"><div class="dialog-heading"><span class="eyebrow">COSMIC CATALOG</span><button class="close-dialog" aria-label="닫기">×</button></div><h2 id="catalog-title">우주의 크기 사전</h2><p>천체와 구조의 크기, 그리고 그 사이의 거리.</p><div id="catalog-list"></div></dialog>
+    <noscript><div class="noscript">우주 탐색 화면을 사용하려면 JavaScript를 켜주세요. 지구의 적도 지름은 약 12,756 km이며, 우리은하의 별 원반 지름은 약 10만 광년입니다.</div></noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
