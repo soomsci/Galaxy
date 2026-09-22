@@ -53,7 +53,7 @@
       </main>
 
       <footer class="bottom-bar">
-        <div class="scale-readout"><span class="muted">화면 가로 폭</span><strong id="scale-value"></strong><span class="power" id="power-value"></span><span class="scale-rule" id="scale-rule"><span id="scale-rule-label"></span></span></div>
+        <div class="scale-readout"><span class="muted">화면 가로 폭</span><strong id="scale-value"></strong><span class="light-time" id="light-time"></span><span class="power" id="power-value"></span><span class="scale-rule" id="scale-rule"><span id="scale-rule-label"></span></span></div>
         <div class="input-hint"><svg width="13" height="18" viewBox="0 0 13 18" fill="none" aria-hidden="true"><rect x="1" y="1" width="11" height="16" rx="5.5"/><path d="M6.5 4v4"/></svg> 스크롤로 우주를 탐색하세요 <span class="key-hint">↑ ↓</span></div>
         <button id="tour-button" class="tour-button"><span class="play-icon" aria-hidden="true">▷</span><span id="tour-label">자동 여행</span></button>
       </footer>
@@ -66,7 +66,8 @@
       <div class="help-grid"><span>가까이 / 멀리</span><strong>↑ / ↓ 또는 + / −</strong><span>이전 / 다음 단계</span><strong>← / →</strong><span>지구 / 우주의 끝</span><strong>Home / End</strong></div>
       <h3>크기를 읽는 방법</h3>
       <p>아래 카드에서 천체의 지름을 확인하세요. 행성의 적도 지름, 은하의 대표 지름, 구조의 분포 범위, 천체 사이 거리를 구분해 표시합니다. 카드를 누르면 자세한 정보와 출처를 볼 수 있습니다.</p>
-      <p>행성 메시의 크기는 실제 축척입니다. 작아진 천체를 가리키는 점, 배경 별, 카드의 그림은 실제 크기가 아닙니다. 은하의 나선팔과 우주 거대구조는 학습용 개념도입니다.</p>
+      <p>기본 모드에서는 작아진 천체와 은하를 찾을 수 있도록 최소 크기로 표시합니다. 배경 별과 카드 그림, 은하의 나선팔과 우주 거대구조는 학습용 개념도입니다.</p>
+      <label class="quality-option"><input type="checkbox" id="true-scale" /> 실제 크기로 보기 <span>확대 마커 끄기</span></label>
       <label class="quality-option"><input type="checkbox" id="low-quality" /> 가벼운 화면 사용 <span>입자 수와 해상도 줄이기</span></label>
       <h3>데이터와 이미지</h3><div id="source-links" class="source-links"></div>
       <p class="credits">지구 이미지: NASA / Reto Stöckli, Blue Marble. 수치는 교육용 반올림 값이며 구조의 정의에 따라 달라질 수 있습니다.</p>

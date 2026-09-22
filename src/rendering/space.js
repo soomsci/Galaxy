@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { AU, LY, projectMeters, visibility, smoothstep } from '../core/scale.js';
+import { AU, LY, projectMeters, visibility, smoothstep, number } from '../core/scale.js';
+import { GALACTIC_DISC_TILT, galacticToWorld } from '../core/coordinates.js';
 import { bodies, byId, planetPosition } from '../data/universe.js';
 
 function randomGenerator(seed = 7919) {
@@ -52,6 +53,7 @@ function makeOortCloud(seed, count) {
 
 function makeGalaxy(seed, count) {
   const random = randomGenerator(seed), positions = [], colors = [];
+  const cosTilt = Math.cos(GALACTIC_DISC_TILT), sinTilt = Math.sin(GALACTIC_DISC_TILT);
   for (let i = 0; i < count; i++) {
     const bulge = random() < .23;
     const radius = bulge ? random() ** 1.5 * .19 : Math.sqrt(random()) * .5;
@@ -59,37 +61,75 @@ function makeGalaxy(seed, count) {
     const angle = bulge ? random() * Math.PI * 2 : arm + radius * 11 + (random() - .5) * (.3 + radius * .6);
     const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius;
     const thickness = (random() - .5) * (bulge ? .12 : .018) * (1 - radius);
-    positions.push(x, y * .48 + thickness * .88, y * .88 - thickness * .48);
+    positions.push(x, y * cosTilt + thickness * sinTilt, y * sinTilt - thickness * cosTilt);
     const color = new THREE.Color().setRGB(bulge ? .95 : .5 + random() * .35, bulge ? .78 : .57 + random() * .24, bulge ? .6 : .95);
     colors.push(color.r, color.g, color.b);
   }
   return pointCloud(positions, colors, 2.4, .9);
 }
 
-function makeWeb(seed, count) {
-  const random = randomGenerator(seed), nodes = [], positions = [], colors = [];
-  for (let i = 0; i < 90; i++) {
-    const v = new THREE.Vector3(random() - .5, random() - .5, random() - .5);
-    if (v.length() > .49) { i--; continue; }
-    nodes.push(v);
+function makeDwarfGalaxy(seed, count) {
+  const random = randomGenerator(seed), positions = [], colors = [];
+  for (let i = 0; i < count; i++) {
+    const radius = Math.pow(random(), .72) * .5;
+    const angle = random() * Math.PI * 2;
+    const z = random() * 2 - 1;
+    const spread = Math.sqrt(1 - z * z);
+    positions.push(Math.cos(angle) * spread * radius, Math.sin(angle) * spread * radius * .66, z * radius * .38);
+    const warm = random();
+    colors.push(.55 + warm * .37, .64 + warm * .2, .82 + warm * .13);
   }
-  const edges = [];
-  nodes.forEach((node, i) => {
-    const nearest = nodes.map((other, j) => ({ j, d: node.distanceTo(other) })).filter(n => n.j !== i).sort((a, b) => a.d - b.d).slice(0, 3);
-    nearest.forEach(n => { if (n.j > i) edges.push([node, nodes[n.j]]); });
+  return pointCloud(positions, colors, 2.8, .82);
+}
+
+function makeLaniakea(seed, count) {
+  const random = randomGenerator(seed), positions = [], colors = [];
+  const attractor = new THREE.Vector3(.12, -.07, 0);
+  const branches = Array.from({ length: 18 }, (_, index) => {
+    const angle = index / 18 * Math.PI * 2 + (random() - .5) * .45;
+    const radius = .34 + random() * .15;
+    const start = new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * .7, (random() - .5) * .35);
+    const bend = start.clone().multiplyScalar(.48).add(new THREE.Vector3((random() - .5) * .2, (random() - .5) * .18, (random() - .5) * .12));
+    return { start, bend };
   });
   for (let i = 0; i < count; i++) {
-    const [a, b] = edges[Math.floor(random() * edges.length)];
-    const t = random(), spread = .003 + Math.sin(t * Math.PI) * .006;
-    const v = a.clone().lerp(b, t);
-    v.x += (random() - .5) * spread * 3;
-    v.y += (random() - .5) * spread * 3;
-    v.z += (random() - .5) * spread * 3;
-    positions.push(v.x, v.y, v.z);
-    const warm = random() > .5;
-    colors.push(warm ? .91 : .55, warm ? .68 : .7, warm ? .48 : .97);
+    const branch = branches[Math.floor(random() * branches.length)];
+    const t = Math.pow(random(), .82), inverse = 1 - t;
+    const point = branch.start.clone().multiplyScalar(inverse * inverse)
+      .add(branch.bend.clone().multiplyScalar(2 * inverse * t))
+      .add(attractor.clone().multiplyScalar(t * t));
+    const spread = .004 + Math.sin(t * Math.PI) * .008;
+    point.add(new THREE.Vector3((random() - .5) * spread, (random() - .5) * spread, (random() - .5) * spread));
+    positions.push(point.x, point.y, point.z);
+    const nearAttractor = t > .72;
+    colors.push(nearAttractor ? .96 : .48, nearAttractor ? .72 : .72, nearAttractor ? .48 : .94);
   }
-  return pointCloud(positions, colors, 2.1, .85);
+  return pointCloud(positions, colors, 1.9, .72);
+}
+
+function makeObservableUniverse(seed, count) {
+  const random = randomGenerator(seed), positions = [], colors = [];
+  const centers = Array.from({ length: 58 }, () => {
+    const radius = Math.cbrt(random()) * .47;
+    const angle = random() * Math.PI * 2, z = random() * 2 - 1;
+    return new THREE.Vector3(Math.cos(angle) * Math.sqrt(1 - z * z) * radius, Math.sin(angle) * Math.sqrt(1 - z * z) * radius, z * radius);
+  });
+  for (let i = 0; i < count; i++) {
+    let point;
+    if (random() < .72) {
+      point = centers[Math.floor(random() * centers.length)].clone();
+      const spread = .012 + random() * .018;
+      point.add(new THREE.Vector3((random() - .5) * spread, (random() - .5) * spread, (random() - .5) * spread));
+    } else {
+      const radius = Math.cbrt(random()) * .49;
+      const angle = random() * Math.PI * 2, z = random() * 2 - 1;
+      point = new THREE.Vector3(Math.cos(angle) * Math.sqrt(1 - z * z) * radius, Math.sin(angle) * Math.sqrt(1 - z * z) * radius, z * radius);
+    }
+    positions.push(point.x, point.y, point.z);
+    const tint = random();
+    colors.push(.46 + tint * .25, .68 + tint * .2, .84 + tint * .16);
+  }
+  return pointCloud(positions, colors, 1.55, .52);
 }
 
 export function createSpace(container, { onInvalidate, onError, lowQuality = false }) {
@@ -126,7 +166,7 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
       mesh.add(ring);
     }
     scene.add(mesh);
-    return { body, mesh, position: planetPosition(body) };
+    return { body, mesh };
   });
   const earth = planets[0].mesh;
   let texture;
@@ -162,37 +202,51 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
     const nearby = i < starCount * .38;
     const radius = nearby ? .8 + Math.pow(random(), .72) * 42 : 10 ** (1.35 + random() * 3.25);
     const a = random() * Math.PI * 2, z = random() * 2 - 1;
-    starsPositions.push(radius * Math.sqrt(1 - z * z) * Math.cos(a), radius * Math.sqrt(1 - z * z) * Math.sin(a), radius * z);
+    starsPositions.push(radius * Math.sqrt(1 - z * z) * Math.cos(a), radius * Math.sqrt(1 - z * z) * Math.sin(a), radius * z * (nearby ? 1 : .15));
     starsColors.push(.65 + random() * .35, .7 + random() * .3, .85 + random() * .15);
   }
   const stars = pointCloud(starsPositions, starsColors, 2.6, .8);
   scene.add(stars);
   const nearbyStarData = [
-    { name: '프록시마 센타우리', distance: 4.25, position: [3.55, -1.8, .4], color: [1, .5, .34] },
-    { name: '시리우스', distance: 8.6, position: [-6.3, 4.65, 1.2], color: [.72, .84, 1] },
-    { name: '엡실론 에리다니', distance: 10.5, position: [7.5, 5.7, -2.4], color: [1, .78, .46] },
-    { name: '프로키온', distance: 11.5, position: [-8.2, -6.1, 1.8], color: [.92, .96, 1] },
-  ];
-  const nearbyStars = pointCloud(nearbyStarData.flatMap(star => star.position), nearbyStarData.flatMap(star => star.color), 7, 1);
+    { name: '프록시마 센타우리', distanceLy: 4.25, l: 313.94, b: -1.93, color: [1, .5, .34] },
+    { name: '시리우스', distanceLy: 8.6, l: 227.23, b: -8.89, color: [.72, .84, 1] },
+    { name: '엡실론 에리다니', distanceLy: 10.5, l: 195.84, b: -48.05, color: [1, .78, .46] },
+    { name: '프로키온', distanceLy: 11.5, l: 213.7, b: 13, color: [.92, .96, 1] },
+  ].map(star => ({ ...star, position: galacticToWorld(star.l, star.b, star.distanceLy) }));
+  const nearbyStars = pointCloud(nearbyStarData.flatMap(star => star.position.map(value => value / LY)), nearbyStarData.flatMap(star => star.color), 7, 1);
   scene.add(nearbyStars);
   const milkyway = makeGalaxy(41, lowQuality ? 9000 : 21000);
   scene.add(milkyway);
   const andromeda = makeGalaxy(91, lowQuality ? 3500 : 7500);
   andromeda.rotation.z = .6;
   scene.add(andromeda);
-  const satelliteGalaxies = Array.from({ length: 14 }, (_, i) => {
-    const galaxy = makeGalaxy(300 + i, 200);
-    const angle = random() * Math.PI * 2;
-    const distance = (.15 + random() * 4.2) * 1e6 * LY;
-    const position = [Math.cos(angle) * distance, Math.sin(angle) * distance * .65, Math.sin(angle) * distance * .4];
+  const galacticCenterPosition = galacticToWorld(0, 0, 26000);
+  const andromedaPosition = galacticToWorld(121.17, -21.57, 2.5e6);
+  const localGalaxyData = [
+    { id: 'sagittarius-dwarf', name: '궁수자리 왜소은하', distanceLy: 65000, diameterLy: 10000, l: 5.6, b: -14.2, type: 'dwarf', seed: 301 },
+    { id: 'lmc', name: '대마젤란은하', distanceLy: 162000, diameterLy: 14000, l: 280.47, b: -32.89, type: 'dwarf', seed: 302 },
+    { id: 'smc', name: '소마젤란은하', distanceLy: 200000, diameterLy: 7000, l: 302.81, b: -44.33, type: 'dwarf', seed: 303 },
+    { id: 'triangulum', name: '삼각형자리은하', distanceLy: 2.73e6, diameterLy: 60000, l: 133.61, b: -31.33, type: 'spiral', seed: 304 },
+  ].map(data => {
+    const count = data.type === 'spiral' ? (lowQuality ? 1800 : 4200) : (lowQuality ? 350 : 800);
+    const galaxy = data.type === 'spiral' ? makeGalaxy(data.seed, count) : makeDwarfGalaxy(data.seed, count);
     galaxy.rotation.z = random() * 6;
     scene.add(galaxy);
-    return { galaxy, position, diameter: (12000 + random() * 30000) * LY };
+    return { ...data, galaxy, position: galacticToWorld(data.l, data.b, data.distanceLy), diameter: data.diameterLy * LY };
+  });
+  const backgroundGalaxies = Array.from({ length: 8 }, (_, i) => {
+    const galaxy = makeDwarfGalaxy(400 + i, lowQuality ? 80 : 160);
+    const angle = random() * Math.PI * 2;
+    const distance = (3.2 + random() * 1.6) * 1e6 * LY;
+    const position = [Math.cos(angle) * distance, Math.sin(angle) * distance * .72, (random() - .5) * distance * .7];
+    galaxy.rotation.z = random() * 6;
+    scene.add(galaxy);
+    return { galaxy, position, diameter: (8000 + random() * 18000) * LY };
   });
   const oort = makeOortCloud(177, lowQuality ? 850 : 1900);
   scene.add(oort);
-  const web = makeWeb(711, lowQuality ? 9000 : 22000);
-  const cosmic = makeWeb(914, lowQuality ? 13000 : 28000);
+  const web = makeLaniakea(711, lowQuality ? 9000 : 22000);
+  const cosmic = makeObservableUniverse(914, lowQuality ? 13000 : 28000);
   scene.add(web, cosmic);
   const boundary = new THREE.Group();
   for (let i = 0; i < 3; i++) {
@@ -206,14 +260,14 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
     boundary.add(line);
   }
   scene.add(boundary);
-  let width = 1, height = 1, lost = false;
+  let width = 1, height = 1, lost = false, trueScale = false;
   const lostHandler = event => { event.preventDefault(); lost = true; onError('3D 화면 연결이 잠시 중단되었습니다. 크기 정보는 계속 볼 수 있습니다. 복구되지 않으면 새로고침해주세요.'); };
   const restoreHandler = () => { lost = false; onError(''); onInvalidate(); };
   renderer.domElement.addEventListener('webglcontextlost', lostHandler);
   renderer.domElement.addEventListener('webglcontextrestored', restoreHandler);
 
-  function setObject(object, diameter, position, zoom, alpha) {
-    const scale = projectMeters(diameter, zoom, 10);
+  function setObject(object, diameter, position, zoom, alpha, minPixels = 0) {
+    const scale = Math.max(projectMeters(diameter, zoom, 10), (trueScale ? 0 : minPixels) * 10 / width);
     object.visible = alpha > .002 && scale > .00005 && scale < 5000;
     if (!object.visible) return;
     object.scale.setScalar(scale);
@@ -236,14 +290,16 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
       camera.top = 5 * height / width; camera.bottom = -camera.top;
       camera.updateProjectionMatrix();
     },
-    render(zoom) {
+    render(zoom, time = 0) {
       if (lost) return [];
       const labels = [];
-      for (const { body, mesh, position } of planets) {
+      const orbitTime = time / 8000;
+      for (const { body, mesh } of planets) {
+        const position = planetPosition(body, orbitTime);
         const radius = projectMeters(body.diameter / 2, zoom, 10);
         const screenDiameter = projectMeters(body.diameter, zoom, width);
         const markerRadiusPixels = body.id === 'sun' ? 7 : body.id === 'saturn' ? 5.5 : 4;
-        const markerRadius = markerRadiusPixels * 10 / width;
+        const markerRadius = (trueScale ? 0 : markerRadiusPixels) * 10 / width;
         const visualRadius = Math.max(radius, markerRadius);
         const visible = zoom < 15.2 && visualRadius < 30;
         mesh.visible = visible;
@@ -256,7 +312,7 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
           atmosphere.scale.setScalar(visualRadius * 1.026);
         }
         if (zoom < 14.9 && (body.id !== 'earth' || zoom > 8)) {
-          labels.push({ id: body.id, name: body.name, position, pixels: Math.max(screenDiameter, markerRadiusPixels * 2), color: body.color });
+          labels.push({ id: body.id, name: body.name, position, pixels: Math.max(screenDiameter, (trueScale ? 0 : markerRadiusPixels * 2)), color: body.color });
         }
       }
       for (const { body, line } of orbitLines) {
@@ -271,26 +327,43 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
       setObject(oort, byId.oort.diameter, [-AU, 0, 0], zoom, visibility(zoom, 14.8, 17.2));
       setObject(stars, LY, [0, 0, 0], zoom, visibility(zoom, 16, 19.9));
       setObject(nearbyStars, LY, [0, 0, 0], zoom, visibility(zoom, 16.35, 18.35));
-      setObject(milkyway, byId.milkyway.diameter, [-26000 * LY, 0, 0], zoom, visibility(zoom, 19.15, 23.3));
-      setObject(andromeda, byId.andromeda.diameter, [2.15e6 * LY, .85e6 * LY, .95e6 * LY], zoom, visibility(zoom, 21.7, 23.7));
-      satelliteGalaxies.forEach(({ galaxy, position, diameter }) => setObject(galaxy, diameter, position, zoom, visibility(zoom, 22.15, 23.8)));
+      setObject(milkyway, byId.milkyway.diameter, galacticCenterPosition, zoom, visibility(zoom, 19.15, 23.3), zoom > 22 ? 18 : 0);
+      setObject(andromeda, byId.andromeda.diameter, andromedaPosition, zoom, visibility(zoom, 21.7, 23.7), 22);
+      localGalaxyData.forEach(({ galaxy, position, diameter, type }) => setObject(galaxy, diameter, position, zoom, visibility(zoom, 21.95, 23.75), type === 'spiral' ? 15 : 9));
+      backgroundGalaxies.forEach(({ galaxy, position, diameter }) => setObject(galaxy, diameter, position, zoom, visibility(zoom, 22.3, 23.75) * .42, 4));
       setObject(web, byId.laniakea.diameter, [-.08 * byId.laniakea.diameter, 0, 0], zoom, visibility(zoom, 23.9, 25.9));
       setObject(cosmic, byId.universe.diameter, [0, 0, 0], zoom, smoothstep(25.6, 26.6, zoom));
       setObject(boundary, byId.universe.diameter, [0, 0, 0], zoom, smoothstep(26.3, 26.8, zoom));
       if (zoom > 15.5 && zoom < 18.2) labels.push({ id: 'oort', name: '오르트 구름', position: [byId.oort.diameter * .48, 0, 0], color: '#aac2cf', pixels: 0 });
       if (zoom > 16.75 && zoom < 18.45) {
-        nearbyStarData.forEach(star => labels.push({ id: star.name, name: `${star.name} · ${star.distance}광년`, position: star.position.map(value => value * LY), color: '#c9dbe2', pixels: 0 }));
+        nearbyStarData.forEach(star => labels.push({ id: star.name, name: `${star.name} · ${star.distanceLy}광년`, position: star.position, color: '#c9dbe2', pixels: 0 }));
       }
-      if (zoom > 20 && zoom < 22.5) labels.push({ id: 'galactic-center', name: '은하 중심', position: [-26000 * LY, 0, 0], color: '#d6c7ab', pixels: 0 });
-      if (zoom > 22 && zoom < 23.7) labels.push({ id: 'andromeda', name: '안드로메다', position: [2.15e6 * LY, .85e6 * LY, .95e6 * LY], color: '#cbbced', pixels: 0 });
+      if (zoom > 20 && zoom < 22.5) labels.push({ id: 'galactic-center', name: '은하 중심', position: galacticCenterPosition, color: '#d6c7ab', pixels: 0 });
+      if (zoom > 22 && zoom < 23.7) {
+        labels.push({ id: 'andromeda', name: '안드로메다 · 250만 광년', position: andromedaPosition, color: '#cbbced', pixels: trueScale ? projectMeters(byId.andromeda.diameter, zoom, width) : 22 });
+        localGalaxyData.forEach(galaxy => labels.push({
+          id: galaxy.id,
+          name: `${galaxy.name} · ${number(galaxy.distanceLy / 10000, galaxy.distanceLy < 100000 ? 1 : 0)}만 광년`,
+          position: galaxy.position,
+          color: '#b9cbe2',
+          pixels: trueScale ? projectMeters(galaxy.diameter, zoom, width) : galaxy.type === 'spiral' ? 15 : 9,
+          offsetX: galaxy.id === 'sagittarius-dwarf' ? 32 : galaxy.id === 'lmc' ? 44 : galaxy.id === 'smc' ? -132 : 0,
+          offsetY: galaxy.id === 'sagittarius-dwarf' ? -54 : galaxy.id === 'lmc' ? 28 : galaxy.id === 'smc' ? 45 : 0,
+          offsetXMobile: galaxy.id === 'sagittarius-dwarf' ? 18 : galaxy.id === 'lmc' ? 20 : galaxy.id === 'smc' ? -98 : 0,
+          offsetYMobile: galaxy.id === 'sagittarius-dwarf' ? -42 : galaxy.id === 'lmc' ? 34 : galaxy.id === 'smc' ? 34 : 0,
+        }));
+      }
+      if (zoom > 24.45 && zoom < 25.9) labels.push({ id: 'great-attractor', name: '거대 인력체 방향', position: [-.02 * byId.laniakea.diameter, -.07 * byId.laniakea.diameter, 0], color: '#e2b887', pixels: 0 });
+      if (zoom > 26.65) labels.push({ id: 'observable-horizon', name: '관측 지평선', position: [.47 * byId.universe.diameter, 0, 0], color: '#8db9ca', pixels: 0 });
       renderer.render(scene, camera);
       return labels.map(label => ({ ...label, x: width / 2 + projectMeters(label.position[0], zoom, width), y: height / 2 - projectMeters(label.position[1], zoom, width) }));
     },
     setQuality(low) {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, low ? 1 : 1.75));
       renderer.setSize(width, height);
-      [stars, nearbyStars, milkyway, andromeda, web, cosmic].forEach(points => points.geometry.setDrawRange(0, Math.floor(points.geometry.attributes.position.count * (low ? .5 : 1))));
+      [stars, nearbyStars, milkyway, andromeda, ...localGalaxyData.map(item => item.galaxy), ...backgroundGalaxies.map(item => item.galaxy), web, cosmic].forEach(points => points.geometry.setDrawRange(0, Math.floor(points.geometry.attributes.position.count * (low ? .5 : 1))));
     },
+    setTrueScale(enabled) { trueScale = enabled; },
     getStats() { return { ...renderer.info.memory, calls: renderer.info.render.calls, points: renderer.info.render.points }; },
     dispose() {
       renderer.domElement.removeEventListener('webglcontextlost', lostHandler);

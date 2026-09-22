@@ -18,6 +18,7 @@ try {
   await page.waitForTimeout(1200);
   assert.equal(await page.locator('#stage-title').textContent(), '지구');
   assert.ok((await page.locator('#size-cards').textContent()).includes('12,756'));
+  assert.ok((await page.locator('#light-time').textContent()).startsWith('빛으로 '));
   await page.screenshot({ path: 'artifacts/earth-desktop.png' });
   for (let i = 0; i < 8; i++) {
     await page.locator(`[data-stage="${i}"]`).click();
@@ -56,6 +57,8 @@ try {
   await page.locator('#zoom-out').click();
   assert.equal(await page.evaluate(() => window.galaxyDiagnostics().touring), false);
   await page.locator('#info-button').click();
+  await page.locator('#true-scale').check();
+  assert.equal(await page.evaluate(() => window.galaxyDiagnostics().trueScale), true);
   await page.locator('#low-quality').check();
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 390, height: 844 });

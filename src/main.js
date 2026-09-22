@@ -1,7 +1,8 @@
 import './styles.css';
-import { MIN_ZOOM, MAX_ZOOM, clamp, damp, formatDistance, projectMeters, scaleBar, stageAt, number, fitZoom } from './core/scale.js';
+import { MIN_ZOOM, MAX_ZOOM, clamp, damp, formatDistance, formatLightTravelTime, projectMeters, scaleBar, stageAt, number, fitZoom } from './core/scale.js';
 import { bodies, byId, stages, sources } from './data/universe.js';
 import { createSpace } from './rendering/space.js';
+import { initSky } from './sky.js';
 
 const $ = id => document.getElementById(id);
 const spaceElement = $('space');
@@ -9,6 +10,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let zoom = fitZoom(byId.earth.diameter, spaceElement.clientWidth, spaceElement.clientHeight, .72);
 let targetZoom = zoom, activeStage = null, frame = 0, lastTime = 0, space = null;
 let touring = false, tourTimer = 0, lastUiZoom = -1, lowQuality = innerWidth < 700;
+let trueScale = false;
 $('low-quality').checked = lowQuality;
 
 // A deterministic decorative background: not a star catalogue or a physical scale.
@@ -41,7 +43,15 @@ function updateStage(stage) {
   $('stage-description').textContent = stage.description;
   $('representation-note').textContent = stage.note;
   $('location-path').textContent = index === 0 ? '지구 · 우리의 출발점' : `지구  /  ${stage.context}`;
-  $('scene-caption').textContent = index < 2 ? '지구 기준 · 실제 축척' : index === 2 ? '지구 기준 · 궤도와 위치는 예시' : '지구 기준 · 우주 구조 개념도';
+  $('scene-caption').textContent = index < 2
+    ? '지구 기준 · 실제 축척'
+    : index === 2
+      ? '지구 기준 · 궤도와 위치는 예시'
+      : stage.id === 'web'
+        ? '은하 흐름 개념도 · 실제 관측 지도 아님'
+        : stage.id === 'universe'
+          ? '관측자 중심 · 구형 경계는 관측 한계'
+          : '지구 기준 · 우주 구조 개념도';
   document.querySelectorAll('.stage-button').forEach((button, i) => {
     if (i === index) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current');
   });
@@ -60,11 +70,18 @@ function renderLabels(labels) {
   for (const label of labels) {
     if (fragments.length >= 10 || label.x < 35 || label.x > width - 95 || label.y < 25 || label.y > height - 35) continue;
     if (width > 700 && label.x < 320 && label.y < 200) continue;
-    const x = label.x + (label.pixels > 10 ? label.pixels / 2 + 6 : 0), y = label.y;
+    const offsetX = width > 700 ? label.offsetX || 0 : label.offsetXMobile || 0;
+    const offsetY = width > 700 ? label.offsetY || 0 : label.offsetYMobile || 0;
+    const anchorX = label.x + (label.pixels > 10 ? label.pixels / 2 + 6 : 0), anchorY = label.y;
+    const x = anchorX + offsetX, y = anchorY + offsetY;
     const box = { x, y: y - 13, width: label.name.length * 11 + 25, height: 27 };
     if (occupied.some(other => box.x < other.x + other.width && box.x + box.width > other.x && box.y < other.y + other.height && box.y + box.height > other.y)) continue;
     if (x + box.width > width - 30) continue;
     occupied.push(box);
+    if (offsetX || offsetY) {
+      const length = Math.hypot(offsetX, offsetY), angle = Math.atan2(offsetY, offsetX) * 180 / Math.PI;
+      fragments.push(`<span class="object-leader" style="left:${anchorX}px;top:${anchorY}px;width:${length}px;transform:rotate(${angle}deg)"></span>`);
+    }
     fragments.push(`<span class="object-label" style="left:${x}px;top:${y}px;--dot:${label.color}">${label.pixels < 3 ? '<i></i>' : ''}${label.name}</span>`);
   }
   $('object-labels').innerHTML = fragments.join('');
@@ -75,6 +92,7 @@ function renderUi() {
   $('zoom-range').value = targetZoom;
   $('zoom-range').setAttribute('aria-valuetext', `화면 가로 폭 ${formatDistance(10 ** targetZoom)}`);
   $('scale-value').textContent = formatDistance(10 ** zoom);
+  $('light-time').textContent = `빛으로 ${formatLightTravelTime(10 ** zoom)}`;
   $('power-value').innerHTML = `10<sup>${zoom.toFixed(2)}</sup> m`;
   $('zoom-in').disabled = targetZoom <= MIN_ZOOM;
   $('zoom-out').disabled = targetZoom >= MAX_ZOOM;
@@ -100,12 +118,13 @@ function tick(time) {
   lastTime = time;
   zoom = reducedMotion.matches ? targetZoom : damp(zoom, targetZoom, dt);
   if (Math.abs(targetZoom - zoom) < .0002) zoom = targetZoom;
-  renderLabels(space?.render(zoom) || []);
+  renderLabels(space?.render(zoom, reducedMotion.matches ? 0 : time) || []);
   if (Math.abs(zoom - lastUiZoom) > .003 || zoom === targetZoom) { renderUi(); lastUiZoom = zoom; }
   if (zoom !== targetZoom) invalidate();
+  else if (!reducedMotion.matches && zoom > 10.3 && zoom < 14.9) invalidate();
 }
 
-function invalidate() { if (!frame && !document.hidden) frame = requestAnimationFrame(tick); }
+function invalidate() { if (!frame && !document.hidden && !document.body.classList.contains('sky-active')) frame = requestAnimationFrame(tick); }
 function setZoom(value, manual = true) {
   if (manual) stopTour();
   targetZoom = clamp(value, MIN_ZOOM, MAX_ZOOM);
@@ -148,6 +167,7 @@ spaceElement.addEventListener('wheel', event => {
   setZoom(targetZoom + clamp(event.deltaY * multiplier, -200, 200) * .0016);
 }, { passive: false });
 document.addEventListener('keydown', event => {
+  if (document.body.classList.contains('sky-active')) return;
   if (document.querySelector('dialog[open]') || event.target.matches('input,textarea,select,button,a')) return;
   const index = stages.indexOf(stageAt(targetZoom, stages));
   const actions = { ArrowUp: () => setZoom(targetZoom - .2), ArrowDown: () => setZoom(targetZoom + .2), '+': () => setZoom(targetZoom - .2), '-': () => setZoom(targetZoom + .2), ArrowLeft: () => goToStage(index - 1), ArrowRight: () => goToStage(index + 1), Home: () => goToStage(0), End: () => goToStage(7) };
@@ -185,6 +205,7 @@ document.querySelectorAll('dialog').forEach(dialog => {
 $('info-button').addEventListener('click', () => showDialog('info-dialog'));
 $('source-links').innerHTML = Object.values(sources).map(source => `<a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title} ↗</a>`).join('');
 $('low-quality').addEventListener('change', event => { lowQuality = event.target.checked; space?.setQuality(lowQuality); invalidate(); });
+$('true-scale').addEventListener('change', event => { trueScale = event.target.checked; space?.setTrueScale(trueScale); invalidate(); });
 
 function openBody(id) {
   const body = byId[id];
@@ -212,12 +233,16 @@ try {
   console.warn('3D initialization failed:', error.message);
   reportError('이 환경에서는 3D 화면을 표시할 수 없습니다. 단계 버튼으로 이동하며 아래에서 천체의 크기와 설명을 확인할 수 있습니다.');
 }
-const resizeObserver = new ResizeObserver(() => { space?.resize(); lastUiZoom = -1; invalidate(); });
+const resizeObserver = new ResizeObserver(() => { if (spaceElement.clientWidth) space?.resize(); lastUiZoom = -1; invalidate(); });
 resizeObserver.observe(spaceElement);
 reducedMotion.addEventListener('change', invalidate);
 document.addEventListener('visibilitychange', () => { lastTime = 0; if (document.hidden) stopTour(); else invalidate(); });
 window.addEventListener('pagehide', event => { stopTour(); if (!event.persisted) { resizeObserver.disconnect(); cancelAnimationFrame(frame); space?.dispose(); } });
 
 // Read-only diagnostics for repeatable browser verification.
-window.galaxyDiagnostics = () => ({ zoom, targetZoom, stage: activeStage?.id, renderer: Boolean(space), touring, stats: space?.getStats() });
-renderUi(); invalidate();
+window.galaxyDiagnostics = () => ({ zoom, targetZoom, stage: activeStage?.id, renderer: Boolean(space), touring, trueScale, stats: space?.getStats() });
+document.addEventListener('galaxy-view-change', event => {
+  stopTour(); cancelAnimationFrame(frame); frame = 0; lastTime = 0;
+  if (!event.detail.sky) { space?.resize(); lastUiZoom = -1; invalidate(); }
+});
+renderUi(); initSky(); invalidate();

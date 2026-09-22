@@ -7,6 +7,9 @@ export const sources = {
   milkyway: { title: 'NASA · How Big is Space?', url: 'https://science.nasa.gov/universe/exoplanets/our-milky-way-galaxy-how-big-is-space/' },
   group: { title: 'NASA · The Local Group', url: 'https://imagine.gsfc.nasa.gov/features/cosmic/local_group_info.html' },
   andromeda: { title: 'ESA · Spiral galaxies', url: 'https://cesar.esa.int/upload/202011/esasky_teacher_guide_onlinesse22.pdf' },
+  magellanic: { title: 'ESA · The Magellanic Clouds', url: 'https://www.esa.int/ESA_Multimedia/Images/2015/09/The_Magellanic_Clouds_and_an_interstellar_filament' },
+  triangulum: { title: 'NASA · Triangulum Galaxy', url: 'https://science.nasa.gov/missions/webb/peering-into-the-tendrils-of-ngc-604-with-nasas-webb/' },
+  sagittarius: { title: 'NASA · Messier 54', url: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-54/' },
   laniakea: { title: 'University of Hawaiʻi · Laniakea', url: 'https://manoa.hawaii.edu/news/article.php?aId=6711' },
   universe: { title: 'NASA · How Big is Space? (2025)', url: 'https://www.nasa.gov/science-research/astrophysics/how-big-is-space-we-asked-a-nasa-expert-episode-61/' },
 };
@@ -47,15 +50,15 @@ export const stages = [
   { id: 'solar', name: '태양계', english: 'A FAMILY AROUND A STAR', start: 10.3, zoom: 13.35, focus: 'solar', cards: ['sun', 'jupiter', 'solar'], description: '하나의 별, 여덟 개의 행성.\n익숙한 이웃 사이에도 거대한 빈 공간이 있습니다.', context: '태양계', note: '행성은 평균 궤도 반지름에 배치한 예시입니다. 작은 천체의 3D 마커는 실제 크기보다 확대되어 있습니다.' },
   { id: 'stars', name: '별과 별 사이', english: 'INTO INTERSTELLAR SPACE', start: 14.35, zoom: 17.25, focus: 'oort', cards: ['oort', 'lightyear', 'sun'], description: '이제 거리를 빛의 시간으로 읽습니다.\n태양계는 광활한 별의 바다 속 작은 점이 됩니다.', context: '태양 주변', note: '오르트 구름은 추정 구조입니다. 별의 위치와 색은 개념도이며 크기는 확대 마커입니다.' },
   { id: 'galaxy', name: '우리은하', english: 'ONE HUNDRED BILLION SUNS', start: 18.65, zoom: 21.45, focus: 'milkyway', cards: ['milkyway', 'oort', 'lightyear'], description: '우리는 은하의 중심에 있지 않습니다.\n나선팔 한쪽에서 이 거대한 별의 도시를 바라봅니다.', context: '우리은하', note: '나선팔과 별 분포는 개념도입니다. 태양계는 은하 중심에서 약 2.6만 광년 떨어져 있습니다.' },
-  { id: 'group', name: '국부은하군', english: 'GALAXIES HAVE NEIGHBORS, TOO', start: 22.05, zoom: 23.5, focus: 'group', cards: ['group', 'andromeda', 'milkyway'], description: '은하도 혼자가 아닙니다.\n우리은하와 안드로메다가 이루는 우주의 작은 동네.', context: '국부은하군', note: '주요 은하의 크기와 대표 거리를 사용한 개념 배치입니다.' },
-  { id: 'web', name: '라니아케아', english: 'THE COSMIC WEB', start: 24.05, zoom: 25.2, focus: 'laniakea', cards: ['laniakea', 'group', 'milkyway'], description: '은하들이 모여 우주의 거대한 그물을 만듭니다.\n그 사이를 채우는 것은 놀라울 만큼 넓은 빈 공간.', context: '라니아케아', note: '필라멘트와 은하 분포는 절차적으로 만든 개념도이며 실제 관측 지도가 아닙니다.' },
-  { id: 'universe', name: '관측 가능한 우주', english: 'THE EDGE OF WHAT WE CAN SEE', start: 26.05, zoom: 27.4, focus: 'universe', cards: ['universe', 'laniakea', 'milkyway'], description: '빛이 우리에게 닿을 수 있는 우주의 범위.\n이 경계 너머가 우주의 끝이라는 뜻은 아닙니다.', context: '관측 가능한 우주', note: '현재 거리 기준의 범위입니다. 우주의 나이인 약 138억 년과는 다른 값입니다.' },
+  { id: 'group', name: '국부은하군', english: 'GALAXIES HAVE NEIGHBORS, TOO', start: 22.05, zoom: 23.05, focus: 'group', cards: ['group', 'andromeda', 'milkyway'], description: '우리 곁에는 작은 위성은하들이 먼저 있습니다.\n지금 보는 안드로메다의 빛은 250만 년 전에 출발했습니다.', context: '국부은하군', note: '주요 은하의 거리와 은하 좌표는 실제 비율입니다. 작은 은하의 표시 크기는 알아보기 쉽게 조정했습니다.' },
+  { id: 'web', name: '라니아케아', english: 'THE COSMIC WEB', start: 24.05, zoom: 25.2, focus: 'laniakea', cards: ['laniakea', 'group', 'milkyway'], description: '은하들은 중력의 강을 따라 한 방향으로 모입니다.\n라니아케아는 그 흐름으로 정의한 우리의 초은하단입니다.', context: '라니아케아', note: '수렴하는 필라멘트는 은하 흐름을 설명하는 개념도이며 실제 관측 지도가 아닙니다.' },
+  { id: 'universe', name: '관측 가능한 우주', english: 'THE EDGE OF WHAT WE CAN SEE', start: 26.05, zoom: 27.4, focus: 'universe', cards: ['universe', 'laniakea', 'milkyway'], description: '수많은 초은하단이 모든 방향에 펼쳐집니다.\n구형 경계는 우주의 끝이 아니라 우리의 관측 한계입니다.', context: '관측 가능한 우주', note: '푸른 입자는 균일한 대규모 분포를 나타낸 개념도입니다. 현재 거리 기준 범위이며 우주의 나이와는 다른 값입니다.' },
 ];
 
-export function planetPosition(body) {
+export function planetPosition(body, orbitTime = 0) {
   if (body.id === 'earth') return [0, 0, 0];
   if (body.id === 'moon') return [384400000 * 0.92, 384400000 * 0.3, 384400000 * Math.sqrt(1 - .92 ** 2 - .3 ** 2)];
   if (body.id === 'sun') return [-AU, 0, 0];
-  const angle = body.phase;
+  const angle = body.phase + orbitTime / body.orbitAU ** 1.5;
   return [(body.orbitAU * Math.cos(angle) - 1) * AU, Math.sin(angle) * body.orbitAU * AU * .65, Math.sin(angle) * body.orbitAU * AU * Math.sqrt(1 - .65 ** 2)];
 }

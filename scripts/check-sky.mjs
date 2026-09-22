@@ -1,0 +1,37 @@
+import { chromium } from '@playwright/test';
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+try {
+  await mkdir('artifacts', { recursive: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto(process.env.BASE_URL || 'http://127.0.0.1:5173');
+  await page.locator('#sky-tab').click();
+  await page.waitForFunction(() => window.skyDiagnostics?.().width > 0);
+  const capture = () => page.locator('#sky-canvas').evaluate(c => c.toDataURL());
+  const center = await capture();
+  await page.screenshot({ path: 'artifacts/sky-center-desktop.png', fullPage: true });
+  await page.locator('[data-sky="arm"]').click();
+  await page.waitForFunction(() => document.querySelector('#sky-bearing').textContent.includes('80°'));
+  assert.notEqual(await capture(), center);
+  await page.screenshot({ path: 'artifacts/sky-arm-desktop.png', fullPage: true });
+  await page.locator('#sky-canvas').focus(); await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(() => window.skyDiagnostics().longitude === 85);
+  await page.locator('#sky-enhance').uncheck();
+  await page.locator('#sky-fov').fill('60');
+  assert.equal(await page.evaluate(() => window.skyDiagnostics().fov), 60);
+  await page.locator('#scale-tab').click();
+  await page.locator('[data-stage="4"]').click();
+  await page.waitForFunction(() => window.galaxyDiagnostics().stage === 'galaxy');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('#sky-tab').click();
+  await page.locator('[data-sky="center"]').click();
+  await page.locator('#sky-enhance').check();
+  await page.screenshot({ path: 'artifacts/sky-mobile.png', fullPage: true });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.reload();
+  await page.waitForFunction(() => window.skyDiagnostics?.().active && window.skyDiagnostics().width > 0);
+  assert.deepEqual(errors, []);
+  console.log('Sky passed: directions, distinct images, keyboard, controls, return to scale, mobile, deep link, no runtime errors.');
+} finally { await browser.close(); }
