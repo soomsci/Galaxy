@@ -52,7 +52,7 @@ export const stages = [
   { id: 'galaxy', name: '우리은하', english: 'ONE HUNDRED BILLION SUNS', start: 18.65, zoom: 21.45, focus: 'milkyway', cards: ['milkyway', 'oort', 'lightyear'], description: '우리는 은하의 중심에 있지 않습니다.\n나선팔 한쪽에서 이 거대한 별의 도시를 바라봅니다.', context: '우리은하', note: '나선팔과 별 분포는 개념도입니다. 태양계는 은하 중심에서 약 2.6만 광년 떨어져 있습니다.' },
   { id: 'group', name: '국부은하군', english: 'GALAXIES HAVE NEIGHBORS, TOO', start: 22.05, zoom: 23.05, focus: 'group', cards: ['group', 'andromeda', 'milkyway'], description: '우리 곁에는 작은 위성은하들이 먼저 있습니다.\n지금 보는 안드로메다의 빛은 250만 년 전에 출발했습니다.', context: '국부은하군', note: '주요 은하의 거리와 은하 좌표는 실제 비율입니다. 작은 은하의 표시 크기는 알아보기 쉽게 조정했습니다.' },
   { id: 'web', name: '라니아케아', english: 'THE COSMIC WEB', start: 24.05, zoom: 25.2, focus: 'laniakea', cards: ['laniakea', 'group', 'milkyway'], description: '은하들은 중력의 강을 따라 한 방향으로 모입니다.\n라니아케아는 그 흐름으로 정의한 우리의 초은하단입니다.', context: '라니아케아', note: '수렴하는 필라멘트는 은하 흐름을 설명하는 개념도이며 실제 관측 지도가 아닙니다.' },
-  { id: 'universe', name: '관측 가능한 우주', english: 'THE EDGE OF WHAT WE CAN SEE', start: 26.05, zoom: 27.4, focus: 'universe', cards: ['universe', 'laniakea', 'milkyway'], description: '수많은 초은하단이 모든 방향에 펼쳐집니다.\n구형 경계는 우주의 끝이 아니라 우리의 관측 한계입니다.', context: '관측 가능한 우주', note: '푸른 입자는 균일한 대규모 분포를 나타낸 개념도입니다. 현재 거리 기준 범위이며 우주의 나이와는 다른 값입니다.' },
+  { id: 'universe', name: '관측 가능한 우주', english: 'THE EDGE OF WHAT WE CAN SEE', start: 26.05, zoom: 27.4, focus: 'universe', cards: ['universe', 'laniakea', 'milkyway'], description: '은하의 그물과 빈 공간이 모든 방향에 이어집니다.\n구형 경계는 우주의 끝이 아니라 우리의 관측 한계입니다.', context: '관측 가능한 우주', note: '그물은 분포를 강조한 개념도이며 개별 구조의 크기·위치는 실제 관측값이 아닙니다. 구는 현재 거리 기준 관측 범위입니다.' },
 ];
 
 export function planetPosition(body, orbitTime = 0) {

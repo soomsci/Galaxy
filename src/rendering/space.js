@@ -108,36 +108,17 @@ function makeLaniakea(seed, count) {
 }
 
 function makeObservableUniverse(seed, count) {
-  const random = randomGenerator(seed), positions = [], colors = [];
-  const centers = Array.from({ length: 58 }, () => {
-    const radius = Math.cbrt(random()) * .47;
-    const angle = random() * Math.PI * 2, z = random() * 2 - 1;
-    return new THREE.Vector3(Math.cos(angle) * Math.sqrt(1 - z * z) * radius, Math.sin(angle) * Math.sqrt(1 - z * z) * radius, z * radius);
-  });
-  for (let i = 0; i < count; i++) {
-    let point;
-    if (random() < .72) {
-      point = centers[Math.floor(random() * centers.length)].clone();
-      const spread = .012 + random() * .018;
-      point.add(new THREE.Vector3((random() - .5) * spread, (random() - .5) * spread, (random() - .5) * spread));
-    } else {
-      const radius = Math.cbrt(random()) * .49;
-      const angle = random() * Math.PI * 2, z = random() * 2 - 1;
-      point = new THREE.Vector3(Math.cos(angle) * Math.sqrt(1 - z * z) * radius, Math.sin(angle) * Math.sqrt(1 - z * z) * radius, z * radius);
-    }
-    positions.push(point.x, point.y, point.z);
-    const tint = random();
-    colors.push(.46 + tint * .25, .68 + tint * .2, .84 + tint * .16);
-  }
-  return pointCloud(positions, colors, 1.55, .52);
+  // Representative texture, not a catalogue or literal billion-light-year
+  // filaments. Many distributed nodes avoid the old 58 saturated blobs.
+  return makeRegionalWeb(seed, count, { nodeCount: 850, global: true });
 }
 
 // An illustrative regional volume bridges the 184× diameter jump between
 // Laniakea and the observable universe. Positions stay fixed as zoom changes.
-function makeRegionalWeb(seed, count) {
+function makeRegionalWeb(seed, count, { nodeCount = 150, global = false } = {}) {
   const random = randomGenerator(seed), positions = [], colors = [];
   const nodes = [new THREE.Vector3(0, 0, 0)];
-  while (nodes.length < 150) {
+  while (nodes.length < nodeCount) {
     const node = new THREE.Vector3(random() - .5, random() - .5, random() - .5);
     if (node.length() < .48) nodes.push(node);
   }
@@ -153,15 +134,19 @@ function makeRegionalWeb(seed, count) {
   for (let i = 0; i < count; i++) {
     const [a, b] = edges[Math.floor(random() * edges.length)];
     const t = random(), point = a.clone().lerp(b, t);
-    const spread = .003 + Math.sin(t * Math.PI) * .005;
+    const spread = global ? .004 + Math.sin(t * Math.PI) * .009 : .003 + Math.sin(t * Math.PI) * .005;
     point.add(new THREE.Vector3(random()-.5, random()-.5, random()-.5).multiplyScalar(spread));
+    if (global && random() < .25) {
+      const radius = Math.cbrt(random()) * .49, z = random()*2-1, angle = random()*Math.PI*2;
+      point.set(radius*Math.sqrt(1-z*z)*Math.cos(angle), radius*Math.sqrt(1-z*z)*Math.sin(angle), radius*z);
+    }
     // Leave the existing Laniakea representation legible at the origin.
-    if (point.length() < .035) { i--; continue; }
+    if ((!global && point.length() < .035) || point.length() > .5) { i--; continue; }
     positions.push(point.x, point.y, point.z);
     const tint = random();
     colors.push(.48 + .25*tint, .66 + .22*tint, .82 + .15*tint);
   }
-  return pointCloud(positions, colors, 2, .62);
+  return pointCloud(positions, colors, global ? 1.6 : 2, global ? .46 : .62);
 }
 
 export function createSpace(container, { onInvalidate, onError, lowQuality = false }) {
@@ -288,7 +273,11 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
       const a = j / 192 * Math.PI * 2;
       return new THREE.Vector3(Math.cos(a) * .5, Math.sin(a) * .5, 0);
     });
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: '#799db0', transparent: true, opacity: .22, depthWrite: false }));
+    const material = i === 0
+      ? new THREE.LineBasicMaterial({ color: '#799db0', transparent: true, opacity: .18, depthWrite: false })
+      : new THREE.LineDashedMaterial({ color: '#799db0', transparent: true, opacity: .07, dashSize: .015, gapSize: .014, depthWrite: false });
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
+    line.computeLineDistances();
     if (i === 1) line.rotation.x = 1.1;
     if (i === 2) line.rotation.y = 1.1;
     boundary.add(line);
