@@ -26,7 +26,7 @@ function haze(l, b) {
 }
 export function initSky() {
   const header = document.querySelector('.header-center');
-  header.outerHTML = '<nav class="view-tabs" aria-label="탐색 화면"><button id="scale-tab" aria-pressed="true">우주의 크기</button><button id="sky-tab" aria-pressed="false">태양계의 밤하늘</button></nav>';
+  header.outerHTML = '<nav class="view-tabs" aria-label="탐색 화면"><button id="scale-tab" aria-pressed="true">우주의 크기</button><button id="sky-tab" aria-pressed="false">태양계의 밤하늘</button><button id="galaxy-tab" aria-pressed="false">우리은하 3D</button></nav>';
   const panel = document.createElement('section');
   panel.id = 'sky-panel'; panel.hidden = true;
   panel.innerHTML = `
@@ -111,12 +111,15 @@ export function initSky() {
   for(const event of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(event,()=>{drag=null;});
   canvas.addEventListener('keydown',e=>{ if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();e.stopPropagation();point(longitude+(e.key==='ArrowRight'?5:-5));} });
   function setTab(sky) {
-    active=sky; panel.hidden=!sky; document.body.classList.toggle('sky-active',sky);
-    $('sky-tab').setAttribute('aria-pressed',String(sky)); $('scale-tab').setAttribute('aria-pressed',String(!sky));
-    document.dispatchEvent(new CustomEvent('galaxy-view-change',{detail:{sky}})); requestDraw();
+    const galaxy = location.hash === '#galaxy';
+    active=sky; panel.hidden=!sky; document.body.classList.toggle('sky-active',sky || galaxy);
+    $('sky-tab').setAttribute('aria-pressed',String(sky)); $('scale-tab').setAttribute('aria-pressed',String(!sky && !galaxy));
+    $('galaxy-tab').setAttribute('aria-pressed',String(galaxy));
+    document.dispatchEvent(new CustomEvent('galaxy-view-change',{detail:{sky:sky || galaxy}})); requestDraw();
   }
   $('sky-tab').addEventListener('click',()=>{location.hash='sky';});
   $('scale-tab').addEventListener('click',()=>{location.hash='scale';});
+  $('galaxy-tab').addEventListener('click',()=>{location.hash='galaxy';});
   window.addEventListener('hashchange',()=>setTab(location.hash==='#sky'));
   new ResizeObserver(requestDraw).observe(canvas);
   choose('center'); setTab(location.hash==='#sky');

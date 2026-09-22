@@ -3,6 +3,7 @@ import { MIN_ZOOM, MAX_ZOOM, clamp, damp, formatDistance, formatLightTravelTime,
 import { bodies, byId, stages, sources } from './data/universe.js';
 import { createSpace } from './rendering/space.js';
 import { initSky } from './sky.js';
+import { initGalaxyView } from './galaxy-view.js';
 
 const $ = id => document.getElementById(id);
 const spaceElement = $('space');
@@ -245,4 +246,4 @@ document.addEventListener('galaxy-view-change', event => {
   stopTour(); cancelAnimationFrame(frame); frame = 0; lastTime = 0;
   if (!event.detail.sky) { space?.resize(); lastUiZoom = -1; invalidate(); }
 });
-renderUi(); initSky(); invalidate();
+renderUi(); initSky(); initGalaxyView(); invalidate();
