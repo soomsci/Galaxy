@@ -132,6 +132,38 @@ function makeObservableUniverse(seed, count) {
   return pointCloud(positions, colors, 1.55, .52);
 }
 
+// An illustrative regional volume bridges the 184× diameter jump between
+// Laniakea and the observable universe. Positions stay fixed as zoom changes.
+function makeRegionalWeb(seed, count) {
+  const random = randomGenerator(seed), positions = [], colors = [];
+  const nodes = [new THREE.Vector3(0, 0, 0)];
+  while (nodes.length < 150) {
+    const node = new THREE.Vector3(random() - .5, random() - .5, random() - .5);
+    if (node.length() < .48) nodes.push(node);
+  }
+  const edges = [], seen = new Set();
+  nodes.forEach((node, i) => {
+    const nearest = nodes.map((other, j) => ({ j, distance: node.distanceTo(other) }))
+      .filter(item => item.j !== i).sort((a, b) => a.distance - b.distance).slice(0, 3);
+    nearest.forEach(({ j }) => {
+      const key = [Math.min(i, j), Math.max(i, j)].join(':');
+      if (!seen.has(key)) { seen.add(key); edges.push([node, nodes[j]]); }
+    });
+  });
+  for (let i = 0; i < count; i++) {
+    const [a, b] = edges[Math.floor(random() * edges.length)];
+    const t = random(), point = a.clone().lerp(b, t);
+    const spread = .003 + Math.sin(t * Math.PI) * .005;
+    point.add(new THREE.Vector3(random()-.5, random()-.5, random()-.5).multiplyScalar(spread));
+    // Leave the existing Laniakea representation legible at the origin.
+    if (point.length() < .035) { i--; continue; }
+    positions.push(point.x, point.y, point.z);
+    const tint = random();
+    colors.push(.48 + .25*tint, .66 + .22*tint, .82 + .15*tint);
+  }
+  return pointCloud(positions, colors, 2, .62);
+}
+
 export function createSpace(container, { onInvalidate, onError, lowQuality = false }) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'default' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowQuality ? 1 : 1.75));
@@ -246,8 +278,10 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
   const oort = makeOortCloud(177, lowQuality ? 850 : 1900);
   scene.add(oort);
   const web = makeLaniakea(711, lowQuality ? 9000 : 22000);
+  const regional = makeRegionalWeb(618, lowQuality ? 10000 : 24000);
+  const regionalDiameter = 8e9 * LY;
   const cosmic = makeObservableUniverse(914, lowQuality ? 13000 : 28000);
-  scene.add(web, cosmic);
+  scene.add(web, regional, cosmic);
   const boundary = new THREE.Group();
   for (let i = 0; i < 3; i++) {
     const points = Array.from({ length: 193 }, (_, j) => {
@@ -332,7 +366,8 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
       localGalaxyData.forEach(({ galaxy, position, diameter, type }) => setObject(galaxy, diameter, position, zoom, visibility(zoom, 21.95, 23.75), type === 'spiral' ? 15 : 9));
       backgroundGalaxies.forEach(({ galaxy, position, diameter }) => setObject(galaxy, diameter, position, zoom, visibility(zoom, 22.3, 23.75) * .42, 4));
       setObject(web, byId.laniakea.diameter, [-.08 * byId.laniakea.diameter, 0, 0], zoom, visibility(zoom, 23.9, 25.9));
-      setObject(cosmic, byId.universe.diameter, [0, 0, 0], zoom, smoothstep(25.6, 26.6, zoom));
+      setObject(regional, regionalDiameter, [0, 0, 0], zoom, visibility(zoom, 25.25, 26.35, .65));
+      setObject(cosmic, byId.universe.diameter, [0, 0, 0], zoom, smoothstep(25.15, 26.25, zoom));
       setObject(boundary, byId.universe.diameter, [0, 0, 0], zoom, smoothstep(26.3, 26.8, zoom));
       if (zoom > 15.5 && zoom < 18.2) labels.push({ id: 'oort', name: '오르트 구름', position: [byId.oort.diameter * .48, 0, 0], color: '#aac2cf', pixels: 0 });
       if (zoom > 16.75 && zoom < 18.45) {
@@ -354,6 +389,7 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
         }));
       }
       if (zoom > 24.45 && zoom < 25.9) labels.push({ id: 'great-attractor', name: '거대 인력체 방향', position: [-.02 * byId.laniakea.diameter, -.07 * byId.laniakea.diameter, 0], color: '#e2b887', pixels: 0 });
+      if (zoom > 25.1 && zoom < 26.35) labels.push({ id: 'regional-web', name: '주변 은하들의 거대 그물 · 개념도', position: [.12 * regionalDiameter, -.09 * regionalDiameter, 0], color: '#a8c9d6', pixels: 0 });
       if (zoom > 26.65) labels.push({ id: 'observable-horizon', name: '관측 지평선', position: [.47 * byId.universe.diameter, 0, 0], color: '#8db9ca', pixels: 0 });
       renderer.render(scene, camera);
       return labels.map(label => ({ ...label, x: width / 2 + projectMeters(label.position[0], zoom, width), y: height / 2 - projectMeters(label.position[1], zoom, width) }));
@@ -361,7 +397,7 @@ export function createSpace(container, { onInvalidate, onError, lowQuality = fal
     setQuality(low) {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, low ? 1 : 1.75));
       renderer.setSize(width, height);
-      [stars, nearbyStars, milkyway, andromeda, ...localGalaxyData.map(item => item.galaxy), ...backgroundGalaxies.map(item => item.galaxy), web, cosmic].forEach(points => points.geometry.setDrawRange(0, Math.floor(points.geometry.attributes.position.count * (low ? .5 : 1))));
+      [stars, nearbyStars, milkyway, andromeda, ...localGalaxyData.map(item => item.galaxy), ...backgroundGalaxies.map(item => item.galaxy), web, regional, cosmic].forEach(points => points.geometry.setDrawRange(0, Math.floor(points.geometry.attributes.position.count * (low ? .5 : 1))));
     },
     setTrueScale(enabled) { trueScale = enabled; },
     getStats() { return { ...renderer.info.memory, calls: renderer.info.render.calls, points: renderer.info.render.points }; },

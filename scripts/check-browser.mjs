@@ -28,6 +28,12 @@ try {
     if ([2, 4, 5, 6, 7].includes(i)) await page.screenshot({ path: `artifacts/stage-${i}-desktop.png` });
   }
   const memoryStart = await page.evaluate(() => window.galaxyDiagnostics().stats);
+  // Stage endpoints alone miss gaps in the Laniakea → universe transition.
+  for (const z of [25.2, 25.6, 26, 26.4]) {
+    await page.locator('#zoom-range').fill(String(z));
+    await page.waitForFunction(value => window.galaxyDiagnostics().zoom === value, z);
+    await page.screenshot({ path: `artifacts/transition-${z}-desktop.png` });
+  }
   for (let i = 0; i < 8; i++) {
     await page.locator(`[data-stage="${i}"]`).click();
     await page.waitForFunction(index => window.galaxyDiagnostics().zoom === window.galaxyDiagnostics().targetZoom && document.querySelector(`[data-stage="${index}"]`).getAttribute('aria-current') === 'step', i);
@@ -66,6 +72,9 @@ try {
   await page.waitForFunction(() => window.galaxyDiagnostics().stage === 'earth');
   await page.screenshot({ path: 'artifacts/earth-mobile.png', fullPage: true });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.locator('#zoom-range').fill('25.6');
+  await page.waitForFunction(() => window.galaxyDiagnostics().zoom === 25.6);
+  await page.screenshot({ path: 'artifacts/transition-mobile.png', fullPage: true });
   for (const i of [3, 4, 7]) {
     await page.locator(`[data-stage="${i}"]`).click();
     await page.waitForFunction(index => document.querySelector(`[data-stage="${index}"]`).getAttribute('aria-current') === 'step', i);
